@@ -32,7 +32,19 @@ class MapView extends React.Component<
     });
 
     map.on('mousedown', (e: MapMouseEvent) => {
-      // @ts-expect-error - classList is actually present, TypeScript lies. Prevent event from being triggered on children.
+      if (
+        // @ts-expect-error - classList is actually present, TypeScript lies.
+        e.originalEvent.target.classList.contains(
+          'mapboxgl-marker-anchor-center',
+        )
+      ) {
+        const mapboxCanvas = document.querySelector('.mapboxgl-canvas');
+        if (mapboxCanvas) {
+          const newEvent = new MouseEvent(e.type, e.originalEvent);
+          mapboxCanvas.dispatchEvent(newEvent);
+        }
+      }
+      // @ts-expect-error - classList is actually present, TypeScript lies.
       if (!e.originalEvent.target.classList.contains('mapboxgl-canvas')) {
         return;
       }
