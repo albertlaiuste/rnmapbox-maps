@@ -12,13 +12,14 @@ class MapView extends React.Component<
     styleURL: string;
     children: JSX.Element;
     onPress: (e: GeoJSON.Feature) => void;
+    onCameraChanged: (e: RNMapView.MapState) => void;
   } & {
     map?: object | null;
   }
 > {
   state = { map: null };
   mapContainer: HTMLElement | null = null;
-  map: mapboxgl.Map | null = null;
+  map: object | null = null;
 
   componentDidMount() {
     const { styleURL } = this.props;
@@ -48,6 +49,7 @@ class MapView extends React.Component<
       if (!e.originalEvent.target.classList.contains('mapboxgl-canvas')) {
         return;
       }
+
       const point: GeoJSON.Feature<GeoJSON.Point> = {
         type: 'Feature',
         geometry: {
@@ -59,6 +61,23 @@ class MapView extends React.Component<
       this.handleMapPress(point);
     });
 
+    map.on('move', () => {
+      // @ts-expect-error - Partially implement for now.
+      const state: RNMapView.MapState = {
+        properties: {
+          center: [map.getCenter().lng, map.getCenter().lat],
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          heading: map.getBearing(),
+          bounds: {
+            ne: map.getBounds()?.getNorthEast().toArray() ?? [0, 0],
+            sw: map.getBounds()?.getSouthWest().toArray() ?? [0, 0],
+          },
+        },
+      };
+      this.handleCameraChanged(state);
+    });
+
     this.map = map;
     this.setState({ map });
   }
@@ -67,6 +86,13 @@ class MapView extends React.Component<
     const { onPress } = this.props;
     if (onPress) {
       onPress(e);
+    }
+  }
+
+  handleCameraChanged(e: RNMapView.MapState) {
+    const { onCameraChanged } = this.props;
+    if (onCameraChanged) {
+      onCameraChanged(e);
     }
   }
 
