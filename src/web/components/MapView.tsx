@@ -1,18 +1,24 @@
 import React from 'react';
-import mapboxgl from 'mapbox-gl';
+import mapboxgl, { type MapMouseEvent } from 'mapbox-gl';
 
 import MapContext from '../MapContext';
+import * as RNMapView from '../../components/MapView';
 
 /**
  * MapView backed by Mapbox GL KS
  */
 class MapView extends React.Component<
-  { styleURL: string; children: JSX.Element },
-  { map?: object | null }
+  RNMapView.default & {
+    styleURL: string;
+    children: JSX.Element;
+    onPress: (e: GeoJSON.Feature) => void;
+  } & {
+    map?: object | null;
+  }
 > {
   state = { map: null };
   mapContainer: HTMLElement | null = null;
-  map: object | null = null;
+  map: mapboxgl.Map | null = null;
 
   componentDidMount() {
     const { styleURL } = this.props;
@@ -24,8 +30,32 @@ class MapView extends React.Component<
       container: this.mapContainer,
       style: styleURL || 'mapbox://styles/mapbox/streets-v11',
     });
+
+    map.on('mousedown', (e: MapMouseEvent) => {
+      // @ts-expect-error - classList is actually present, TypeScript lies. Prevent event from being triggered on children.
+      if (!e.originalEvent.target.classList.contains('mapboxgl-canvas')) {
+        return;
+      }
+      const point: GeoJSON.Feature<GeoJSON.Point> = {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [e.lngLat.lng, e.lngLat.lat],
+        },
+        properties: {},
+      };
+      this.handleMapPress(point);
+    });
+
     this.map = map;
     this.setState({ map });
+  }
+
+  handleMapPress(e: GeoJSON.Feature<GeoJSON.Point>) {
+    const { onPress } = this.props;
+    if (onPress) {
+      onPress(e);
+    }
   }
 
   render() {
